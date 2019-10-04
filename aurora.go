@@ -1,40 +1,47 @@
 package aurora
 
 import (
-	"fmt"
 	"io/ioutil"
 	"regexp"
 	"sync"
 )
 
-var templatesync sync.RWMutex
-var TemplateDir string
-var Templates map[string][]byte
+//Aurora :
+type Aurora struct {
+	TemplateDir string
+	Templates   map[string][]byte
+	Sync        sync.RWMutex
+}
 
-func Init() {
-	Templates = make(map[string][]byte)
-	TemplateDir = "./views"
+//Options :
+type Options struct {
+	TemplateDir string
+}
+
+//Init :
+func (a *Aurora) Init(opt *Options) {
+	a.Templates = make(map[string][]byte)
+	a.TemplateDir = opt.TemplateDir
 }
 
 //Render : Render template
-func Render(templatefilepath string, renderobject map[string]interface{}) string {
+func (a *Aurora) Render(templatefilepath string, renderobject map[string]interface{}) string {
 	var err error
 	rgx := regexp.MustCompile(`(?i)^[\/]*`)
 	templatefilepath = rgx.ReplaceAllLiteralString(templatefilepath, "")
-	templatesync.Lock()
-	if len(Templates[templatefilepath]) < 1 { //parse template if template file isn't loaded
-		Templates[templatefilepath], err = ioutil.ReadFile(TemplateDir + "/" + templatefilepath + ".aurora")
-		templatesync.Unlock()
+	a.Sync.Lock()
+	if len(a.Templates[templatefilepath]) < 1 { //parse template if template file isn't loaded
+		a.Templates[templatefilepath], err = ioutil.ReadFile(a.TemplateDir + "/" + templatefilepath + ".aurora")
+		a.Sync.Unlock()
 		if err != nil {
-			fmt.Printf(`Error : %v`, err.Error())
 			return "<!Doctype html><html><head><title>Error!</title></head><body><h1>Error while parsing template file.</h2></body></html>"
 		}
 	} else {
-		templatesync.Unlock()
+		a.Sync.Unlock()
 	}
-	templatesync.Lock()
-	html := Templates[templatefilepath]
-	templatesync.Unlock()
+	a.Sync.Lock()
+	html := a.Templates[templatefilepath]
+	a.Sync.Unlock()
 	for key, value := range renderobject {
 		rpattern := regexp.MustCompile(`(?i)\[\{\{` + key + `\}\}\]*`)
 		if value != nil {
