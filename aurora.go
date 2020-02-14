@@ -1,54 +1,78 @@
 package aurora
 
 import (
+	"bytes"
 	"io/ioutil"
+	"log"
 	"regexp"
-	"sync"
 )
 
 //Aurora :
 type Aurora struct {
-	TemplateDir string
-	Templates   map[string][]byte
-	Sync        sync.RWMutex
+	TemplatePath string
+	RunMode      string
+	Templates    map[string]*Template
 }
 
-//Options :
-type Options struct {
-	TemplateDir string
+//Template :
+type Template struct {
+	Name string
+	Data []byte
+}
+
+//NewAurora :
+func NewAurora(templatePath string, runMode string) *Aurora {
+	rgx := regexp.MustCompile(`(\/)+$`)
+	templatePath = rgx.ReplaceAllLiteralString(templatePath, "")
+	return &Aurora{
+		TemplatePath: templatePath,
+		RunMode:      runMode,
+		Templates:    make(map[string]*Template),
+	}
 }
 
 //Init :
-func (a *Aurora) Init(opt *Options) {
-	a.Templates = make(map[string][]byte)
-	a.TemplateDir = opt.TemplateDir
+func (aurora *Aurora) Init() {
+	if files, err := ioutil.ReadDir(aurora.TemplatePath); err != nil {
+		log.Println(err)
+	} else {
+		isAuroraFile := regexp.MustCompile(`\.aurora$`)
+		for _, file := range files {
+			if isAuroraFile.MatchString(file.Name()) {
+				templateName := isAuroraFile.ReplaceAllLiteralString(file.Name(), "")
+				aurora.Templates[templateName] = &Template{Name: templateName}
+				if aurora.Templates[templateName].Data, err = ioutil.ReadFile(aurora.TemplatePath + "/" + file.Name()); err != nil {
+					log.Printf("Could not read template file %v (%v)\n", file.Name(), err)
+				}
+			}
+		}
+	}
 }
 
-//Render : Render template
-func (a *Aurora) Render(templatefilepath string, renderobject map[string]interface{}) string {
-	var err error
-	rgx := regexp.MustCompile(`(?i)^[\/]*`)
-	templatefilepath = rgx.ReplaceAllLiteralString(templatefilepath, "")
-	a.Sync.Lock()
-	if len(a.Templates[templatefilepath]) < 1 { //parse template if template file isn't loaded
-		a.Templates[templatefilepath], err = ioutil.ReadFile(a.TemplateDir + "/" + templatefilepath + ".aurora")
-		a.Sync.Unlock()
-		if err != nil {
-			return "<!Doctype html><html><head><title>Error!</title></head><body><h1>Error while parsing template file.</h2></body></html>"
+//Render :
+func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) []byte {
+
+	//render loops
+	rgx := regexp.MustCompile(`(?is)(\{\{\s*for\.([a-z]*)\.in\.([a-z]*))(.*?)(endfor\s*\}\})`)
+	for _, loop := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
+		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[1], []byte(""), 1)
+		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[5], []byte(""), 1)
+
+		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\s*\}\}`)
+		loopstr := ""
+		for _, item := range datas[string(loop[3])].([]string) {
+			temp := loop[4]
+			temp = re.ReplaceAllLiteral([]byte(temp), []byte(item))
+			loopstr += string(temp)
 		}
-	} else {
-		a.Sync.Unlock()
+
+		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[4], []byte(loopstr), 1)
 	}
-	a.Sync.Lock()
-	html := a.Templates[templatefilepath]
-	a.Sync.Unlock()
-	for key, value := range renderobject {
-		rpattern := regexp.MustCompile(`(?i)\[\{\{` + key + `\}\}\]*`)
-		if value != nil {
-			html = rpattern.ReplaceAllLiteral(html, []byte(value.(string)))
-		} else {
-			html = rpattern.ReplaceAllLiteral(html, []byte(""))
-		}
+
+	rgx = regexp.MustCompile(`\{\{\s*([a-z]*)\s*\}\}`)
+	for _, param := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
+		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, param[0], []byte(datas[string(param[1])].(string)), 1)
 	}
-	return string(html)
+
+	return aurora.Templates[templateName].Data
 }
