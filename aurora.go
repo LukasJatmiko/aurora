@@ -62,7 +62,7 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 
 		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\s*\}\}`)
 		loopstr := ""
-		for _, item := range datas[string(loop[3])].([]interface{}) {
+		for _, item := range datas[string(loop[3])].([]map[string]interface{}) {
 			temp := loop[4]
 			temp = re.ReplaceAllLiteral([]byte(temp), []byte("%v"))
 			loopstr += string(temp)
