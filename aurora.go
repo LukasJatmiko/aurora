@@ -62,16 +62,18 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 
 		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\.{1}([a-z\_\-]*)\s*\}\}`)
 		loopstr := ""
-		for _, item := range datas[string(loop[3])].([]map[string]interface{}) {
+
+		arrData := datas[string(loop[3])].([]interface{})
+		for _, item := range arrData {
 			temp := loop[4]
 			temp = re.ReplaceAllLiteral(temp, []byte("%v"))
 			loopstr += string(temp)
 
 			for _, d := range re.FindAllSubmatch(loop[4], -1) {
 				if string(d[1]) == "" {
-					loopVars = append(loopVars, item[string(loop[2])])
+					loopVars = append(loopVars, item)
 				} else {
-					loopVars = append(loopVars, item[string(loop[2])].(map[string]interface{})[string(d[1])])
+					loopVars = append(loopVars, item.(map[string]interface{})[string(d[1])])
 				}
 			}
 		}
