@@ -54,22 +54,25 @@ func (aurora *Aurora) Init() {
 func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) []byte {
 
 	//render loops
-	rgx := regexp.MustCompile(`(?is)(\{\{\s*for\.([a-z]*)\.in\.([a-z]*))(.*?)(endfor\s*\}\})`)
+	rgx := regexp.MustCompile(`(?is)(\{\{\s*for\.([a-z\-\_]*)\.in\.([a-z\-\_]*))(.*?)(endfor\s*\}\})`)
 	var loopVars []interface{}
 	for _, loop := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[1], []byte(""), 1)
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[5], []byte(""), 1)
 
-		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\s*\}\}`)
+		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\.{1}([a-z\_\-]*)\s*\}\}`)
 		loopstr := ""
 		for _, item := range datas[string(loop[3])].([]map[string]interface{}) {
 			temp := loop[4]
-			fmt.Println("Replacing var on " + string(temp) + " with %v")
-			matches := re.FindAllIndex(temp, -1)
 			temp = re.ReplaceAllLiteral(temp, []byte("%v"))
 			loopstr += string(temp)
-			for range matches {
-				loopVars = append(loopVars, item[string(loop[2])])
+
+			for _, d := range re.FindAllSubmatch(temp, -1) {
+				if string(d[1]) == "" {
+					loopVars = append(loopVars, item[string(loop[2])])
+				} else {
+					loopVars = append(loopVars, item[string(loop[2])].(map[string]interface{})[string(d[1])])
+				}
 			}
 		}
 
