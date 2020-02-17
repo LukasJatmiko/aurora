@@ -61,19 +61,25 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[5], []byte(""), 1)
 
 		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\.{1}([a-z\_\-]*)\s*\}\}`)
+		temp := loop[4]
+		temp = re.ReplaceAllLiteral(temp, []byte("%v"))
 		loopstr := ""
 
-		arrData := datas[string(loop[3])].([]interface{})
-		for _, item := range arrData {
-			temp := loop[4]
-			temp = re.ReplaceAllLiteral(temp, []byte("%v"))
-			loopstr += string(temp)
-
-			for _, d := range re.FindAllSubmatch(loop[4], -1) {
-				if string(d[1]) == "" {
+		switch datas[string(loop[3])].(type) {
+		default:
+			{
+				for _, item := range datas[string(loop[3])].([]interface{}) {
+					loopstr += string(temp)
 					loopVars = append(loopVars, item)
-				} else {
-					loopVars = append(loopVars, item.(map[string]interface{})[string(d[1])])
+				}
+			}
+		case []map[string]interface{}:
+			{
+				for _, item := range datas[string(loop[3])].([]map[string]interface{}) {
+					loopstr += string(temp)
+					for _, d := range re.FindAllSubmatch(loop[4], -1) {
+						loopVars = append(loopVars, item[string(d[1])])
+					}
 				}
 			}
 		}
