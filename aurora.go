@@ -68,6 +68,7 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 			loopstr += string(temp)
 
 			for _, d := range re.FindAllSubmatch(temp, -1) {
+				fmt.Println("var : " + string(d[1]))
 				if string(d[1]) == "" {
 					loopVars = append(loopVars, item[string(loop[2])])
 				} else {
@@ -75,6 +76,7 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 				}
 			}
 		}
+		fmt.Println("Loopstr" + loopstr)
 
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[4], []byte(loopstr), 1)
 	}
