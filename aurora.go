@@ -64,9 +64,13 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 		loopstr := ""
 		for _, item := range datas[string(loop[3])].([]map[string]interface{}) {
 			temp := loop[4]
-			temp = re.ReplaceAllLiteral([]byte(temp), []byte("%v"))
+			fmt.Println("Replacing var on " + string(temp) + " with %v")
+			matches := re.FindAllIndex(temp, -1)
+			temp = re.ReplaceAllLiteral(temp, []byte("%v"))
 			loopstr += string(temp)
-			loopVars = append(loopVars, item)
+			for range matches {
+				loopVars = append(loopVars, item[string(loop[2])])
+			}
 		}
 
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[4], []byte(loopstr), 1)
