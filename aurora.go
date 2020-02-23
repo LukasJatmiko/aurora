@@ -94,7 +94,5 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 		loopVars = append(loopVars, datas[string(param[1])])
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, param[0], []byte("%v"), 1)
 	}
-	aurora.Templates[templateName].Data = []byte(fmt.Sprintf(string(aurora.Templates[templateName].Data), loopVars...))
-
-	return aurora.Templates[templateName].Data
+	return []byte(fmt.Sprintf(string(aurora.Templates[templateName].Data), loopVars...))
 }
