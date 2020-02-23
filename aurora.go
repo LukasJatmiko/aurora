@@ -89,7 +89,7 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 	aurora.Templates[templateName].Data = []byte(fmt.Sprintf(string(aurora.Templates[templateName].Data), loopVars...))
 
 	loopVars = nil
-	rgx = regexp.MustCompile(`\{\{\s*([a-z]*)\s*\}\}`)
+	rgx = regexp.MustCompile(`(?is)\{\{\s*([a-z]*)\s*\}\}`)
 	for _, param := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
 		loopVars = append(loopVars, datas[string(param[1])])
 		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, param[0], []byte("%v"), 1)
