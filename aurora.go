@@ -54,11 +54,12 @@ func (aurora *Aurora) Init() {
 func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) []byte {
 
 	//render loops
+	composeView := aurora.Templates[templateName].Data
 	rgx := regexp.MustCompile(`(?is)(\{\{\s*for\.([a-z\-\_]*)\.in\.([a-z\-\_]*))(.*?)(endfor\s*\}\})`)
 	var loopVars []interface{}
-	for _, loop := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
-		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[1], []byte(""), 1)
-		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[5], []byte(""), 1)
+	for _, loop := range rgx.FindAllSubmatch(composeView, -1) {
+		composeView = bytes.Replace(composeView, loop[1], []byte(""), 1)
+		composeView = bytes.Replace(composeView, loop[5], []byte(""), 1)
 
 		re := regexp.MustCompile(`(?is)\{\{\s*` + string(loop[2]) + `\.{1}([a-z\_\-]*)\s*\}\}`)
 		temp := loop[4]
@@ -84,15 +85,15 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 			}
 		}
 
-		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, loop[4], []byte(loopstr), 1)
+		composeView = bytes.Replace(composeView, loop[4], []byte(loopstr), 1)
 	}
-	aurora.Templates[templateName].Data = []byte(fmt.Sprintf(string(aurora.Templates[templateName].Data), loopVars...))
+	composeView = []byte(fmt.Sprintf(string(composeView), loopVars...))
 
 	loopVars = nil
 	rgx = regexp.MustCompile(`(?is)\{\{\s*([a-z]*)\s*\}\}`)
-	for _, param := range rgx.FindAllSubmatch(aurora.Templates[templateName].Data, -1) {
+	for _, param := range rgx.FindAllSubmatch(composeView, -1) {
 		loopVars = append(loopVars, datas[string(param[1])])
-		aurora.Templates[templateName].Data = bytes.Replace(aurora.Templates[templateName].Data, param[0], []byte("%v"), 1)
+		composeView = bytes.Replace(composeView, param[0], []byte("%v"), 1)
 	}
-	return []byte(fmt.Sprintf(string(aurora.Templates[templateName].Data), loopVars...))
+	return []byte(fmt.Sprintf(string(composeView), loopVars...))
 }
