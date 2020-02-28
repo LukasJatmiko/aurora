@@ -90,7 +90,7 @@ func (aurora *Aurora) Render(templateName string, datas map[string]interface{}) 
 	composeView = []byte(fmt.Sprintf(string(composeView), loopVars...))
 
 	loopVars = nil
-	rgx = regexp.MustCompile(`(?is)\{\{\s*([a-z]*)\s*\}\}`)
+	rgx = regexp.MustCompile(`(?is)\{\{\s*([a-z\-\_]*)\s*\}\}`)
 	for _, param := range rgx.FindAllSubmatch(composeView, -1) {
 		loopVars = append(loopVars, datas[string(param[1])])
 		composeView = bytes.Replace(composeView, param[0], []byte("%v"), 1)
